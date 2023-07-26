@@ -528,7 +528,11 @@ impl Operator {
                         return Ok(Value::Empty);
                     }
                 }
-                Ok(Value::Boolean(arguments[0] == arguments[1]))
+                if let (Ok(a), Ok(b)) = (arguments[0].as_number(), arguments[1].as_number()) {
+                    Ok(Value::Boolean(a == b))
+                } else {
+                    Ok(Value::Boolean(arguments[0] == arguments[1]))
+                }
             },
             Neq => {
                 expect_operator_argument_amount(arguments.len(), 2)?;
@@ -538,7 +542,11 @@ impl Operator {
                         return Ok(Value::Empty);
                     }
                 }
-                Ok(Value::Boolean(arguments[0] != arguments[1]))
+                if let (Ok(a), Ok(b)) = (arguments[0].as_number(), arguments[1].as_number()) {
+                    Ok(Value::Boolean(a != b))
+                } else {
+                    Ok(Value::Boolean(arguments[0] != arguments[1]))
+                }
             },
             Gt => {
                 expect_operator_argument_amount(arguments.len(), 2)?;

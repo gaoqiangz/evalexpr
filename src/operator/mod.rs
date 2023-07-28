@@ -124,7 +124,7 @@ impl Operator {
             Neg => 110,
 
             #[cfg(feature = "percent_operator_is_percentage")]
-            Percentage => 115,
+            Percentage => 110,
 
             Mul | Div => 100,
             #[cfg(not(feature = "percent_operator_is_percentage"))]

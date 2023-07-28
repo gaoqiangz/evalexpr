@@ -34,6 +34,7 @@ impl fmt::Display for Token {
             MinusAssign => write!(f, "-="),
             StarAssign => write!(f, "*="),
             SlashAssign => write!(f, "/="),
+            #[cfg(not(feature = "percent_operator_is_percentage"))]
             PercentAssign => write!(f, "%="),
             HatAssign => write!(f, "^="),
             AndAssign => write!(f, "&&="),

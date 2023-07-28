@@ -627,7 +627,7 @@ impl Node {
         //     self.operator()
         // );
         // println!("Self is {:?}", self);
-        if self.operator().precedence() < node.operator().precedence() || node.operator().is_unary() || is_root_node
+        if self.operator().precedence() < node.operator().precedence() || node.operator().is_prefix_unary() || is_root_node
             // Right-to-left chaining
             || (self.operator().precedence() == node.operator().precedence() && !self.operator().is_left_to_right() && !node.operator().is_left_to_right())
         {
@@ -638,7 +638,7 @@ impl Node {
                 let last_child_operator = self.children.last().unwrap().operator();
 
                 if last_child_operator.precedence()
-                    < node.operator().precedence() || node.operator().is_unary()
+                    < node.operator().precedence() || node.operator().is_prefix_unary()
                     // Right-to-left chaining
                     || (last_child_operator.precedence()
                     == node.operator().precedence() && !last_child_operator.is_left_to_right() && !node.operator().is_left_to_right())
@@ -790,6 +790,9 @@ pub(crate) fn tokens_to_operator_tree(tokens: Vec<Token>) -> EvalexprResult<Node
             },
             Token::Star => Some(Node::new(Operator::Mul)),
             Token::Slash => Some(Node::new(Operator::Div)),
+            #[cfg(feature = "percent_operator_is_percentage")]
+            Token::Percent => Some(Node::new(Operator::Percentage)),
+            #[cfg(not(feature = "percent_operator_is_percentage"))]
             Token::Percent => Some(Node::new(Operator::Mod)),
             Token::Hat => Some(Node::new(Operator::Exp)),
 
@@ -821,6 +824,7 @@ pub(crate) fn tokens_to_operator_tree(tokens: Vec<Token>) -> EvalexprResult<Node
             Token::MinusAssign => Some(Node::new(Operator::SubAssign)),
             Token::StarAssign => Some(Node::new(Operator::MulAssign)),
             Token::SlashAssign => Some(Node::new(Operator::DivAssign)),
+            #[cfg(not(feature = "percent_operator_is_percentage"))]
             Token::PercentAssign => Some(Node::new(Operator::ModAssign)),
             Token::HatAssign => Some(Node::new(Operator::ExpAssign)),
             Token::AndAssign => Some(Node::new(Operator::AndAssign)),

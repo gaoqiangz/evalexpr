@@ -57,6 +57,64 @@ pub fn builtin_function(identifier: &str) -> Option<Function> {
         #[cfg(not(feature = "decimal_support"))]
         "math::log2" => simple_math!(log2),
         "math::log10" => simple_math!(log10),
+        // Mod
+        #[cfg(feature = "percent_operator_is_percentage")]
+        "math::mod" => Some(Function::new(|argument| {
+            let arguments = argument.as_fixed_len_tuple(2)?;
+            #[cfg(feature = "empty_is_null")]
+            {
+                if arguments[0].is_empty() || arguments[1].is_empty() {
+                    return Ok(Value::Empty);
+                }
+            }
+            #[cfg(feature = "decimal_support")]
+            {
+                if let (Ok(a), Ok(b)) = (arguments[0].as_int(), arguments[1].as_int()) {
+                    let result = a.checked_rem(b);
+                    if let Some(result) = result {
+                        Ok(Value::Int(result))
+                    } else {
+                        Err(EvalexprError::modulation_error(
+                            arguments[0].clone(),
+                            arguments[1].clone(),
+                        ))
+                    }
+                } else {
+                    let a = arguments[0].as_number()?;
+                    let b = arguments[1].as_number()?;
+                    let result = a.checked_rem(b);
+                    if let Some(result) = result {
+                        Ok(Value::Float(result))
+                    } else {
+                        Err(EvalexprError::modulation_error(
+                            arguments[0].clone(),
+                            arguments[1].clone(),
+                        ))
+                    }
+                }
+            }
+            #[cfg(not(feature = "decimal_support"))]
+            {
+                arguments[0].as_number()?;
+                arguments[1].as_number()?;
+
+                if let (Ok(a), Ok(b)) = (arguments[0].as_int(), arguments[1].as_int()) {
+                    let result = a.checked_rem(b);
+                    if let Some(result) = result {
+                        Ok(Value::Int(result))
+                    } else {
+                        Err(EvalexprError::modulation_error(
+                            arguments[0].clone(),
+                            arguments[1].clone(),
+                        ))
+                    }
+                } else {
+                    Ok(Value::Float(
+                        arguments[0].as_number()? % arguments[1].as_number()?,
+                    ))
+                }
+            }
+        })),
         // Exp
         "math::exp" => simple_math!(exp),
         #[cfg(not(feature = "decimal_support"))]
@@ -64,8 +122,8 @@ pub fn builtin_function(identifier: &str) -> Option<Function> {
         // Pow
         #[cfg(feature = "decimal_support")]
         "math::pow" => Some(Function::new(|argument| {
-            let tuple = argument.as_fixed_len_tuple(2)?;
-            let (a, b) = (tuple[0].as_number()?, tuple[1].as_number()?);
+            let arguments = argument.as_fixed_len_tuple(2)?;
+            let (a, b) = (arguments[0].as_number()?, arguments[1].as_number()?);
             Ok(Value::Float(a.powf(b.to_f64().unwrap())))
         })),
         #[cfg(not(feature = "decimal_support"))]

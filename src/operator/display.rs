@@ -12,8 +12,11 @@ impl Display for Operator {
             Add => write!(f, "+"),
             Sub => write!(f, "-"),
             Neg => write!(f, "-"),
+            #[cfg(feature = "percent_operator_is_percentage")]
+            Percentage => write!(f, "%"),
             Mul => write!(f, "*"),
             Div => write!(f, "/"),
+            #[cfg(not(feature = "percent_operator_is_percentage"))]
             Mod => write!(f, "%"),
             Exp => write!(f, "^"),
 
@@ -32,6 +35,7 @@ impl Display for Operator {
             SubAssign => write!(f, " -= "),
             MulAssign => write!(f, " *= "),
             DivAssign => write!(f, " /= "),
+            #[cfg(not(feature = "percent_operator_is_percentage"))]
             ModAssign => write!(f, " %= "),
             ExpAssign => write!(f, " ^= "),
             AndAssign => write!(f, " &&= "),

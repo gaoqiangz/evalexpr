@@ -17,11 +17,15 @@ pub enum Operator {
     Sub,
     /// A unary negation operator.
     Neg,
+    /// A suffix unary percentage operator.
+    #[cfg(feature = "percent_operator_is_percentage")]
+    Percentage,
     /// A binary multiplication operator.
     Mul,
     /// A binary division operator.
     Div,
     /// A binary modulo operator.
+    #[cfg(not(feature = "percent_operator_is_percentage"))]
     Mod,
     /// A binary exponentiation operator.
     Exp,
@@ -56,6 +60,7 @@ pub enum Operator {
     /// A binary divide-assign operator.
     DivAssign,
     /// A binary modulo-assign operator.
+    #[cfg(not(feature = "percent_operator_is_percentage"))]
     ModAssign,
     /// A binary exponentiate-assign operator.
     ExpAssign,
@@ -117,7 +122,14 @@ impl Operator {
 
             Add | Sub => 95,
             Neg => 110,
-            Mul | Div | Mod => 100,
+
+            #[cfg(feature = "percent_operator_is_percentage")]
+            Percentage => 115,
+
+            Mul | Div => 100,
+            #[cfg(not(feature = "percent_operator_is_percentage"))]
+            Mod => 100,
+
             Exp => 120,
 
             Eq | Neq | Gt | Lt | Geq | Leq => 80,
@@ -125,8 +137,11 @@ impl Operator {
             Or => 70,
             Not => 110,
 
-            Assign | AddAssign | SubAssign | MulAssign | DivAssign | ModAssign | ExpAssign
-            | AndAssign | OrAssign => 50,
+            Assign | AddAssign | SubAssign | MulAssign | DivAssign | ExpAssign | AndAssign
+            | OrAssign => 50,
+
+            #[cfg(not(feature = "percent_operator_is_percentage"))]
+            ModAssign => 50,
 
             Tuple => 40,
             Chain => 0,
@@ -161,9 +176,17 @@ impl Operator {
     pub(crate) const fn max_argument_amount(&self) -> Option<usize> {
         use crate::operator::Operator::*;
         match self {
-            Add | Sub | Mul | Div | Mod | Exp | Eq | Neq | Gt | Lt | Geq | Leq | And | Or
-            | Assign | AddAssign | SubAssign | MulAssign | DivAssign | ModAssign | ExpAssign
-            | AndAssign | OrAssign => Some(2),
+            Add | Sub | Mul | Div | Exp | Eq | Neq | Gt | Lt | Geq | Leq | And | Or | Assign
+            | AddAssign | SubAssign | MulAssign | DivAssign | ExpAssign | AndAssign | OrAssign => {
+                Some(2)
+            },
+
+            #[cfg(feature = "percent_operator_is_percentage")]
+            Percentage => Some(1),
+
+            #[cfg(not(feature = "percent_operator_is_percentage"))]
+            Mod | ModAssign => Some(2),
+
             Tuple | Chain => None,
             Not | Neg | RootNode => Some(1),
             Const { .. } => Some(0),
@@ -172,9 +195,25 @@ impl Operator {
         }
     }
 
-    /// Returns true if this operator is unary, i.e. it requires exactly one argument.
-    pub(crate) fn is_unary(&self) -> bool {
-        self.max_argument_amount() == Some(1) && *self != Operator::RootNode
+    /// Returns true if this operator is prefix unary, i.e. it requires exactly one argument.
+    pub(crate) fn is_prefix_unary(&self) -> bool {
+        self.max_argument_amount() == Some(1) && *self != Operator::RootNode && {
+            #[cfg(feature = "percent_operator_is_percentage")]
+            {
+                *self != Operator::Percentage
+            }
+            #[cfg(not(feature = "percent_operator_is_percentage"))]
+            {
+                true
+            }
+        }
+    }
+
+    /// Returns true if this operator is suffix unary, i.e. it requires exactly one argument.
+    #[allow(dead_code)]
+    #[cfg(feature = "percent_operator_is_percentage")]
+    pub(crate) fn is_suffix_unary(&self) -> bool {
+        self.max_argument_amount() == Some(1) && *self == Operator::Percentage
     }
 
     /// Evaluates the operator with the given arguments and context.
@@ -323,6 +362,31 @@ impl Operator {
                     Ok(Value::Float(-arguments[0].as_number()?))
                 }
             },
+            #[cfg(feature = "percent_operator_is_percentage")]
+            Percentage => {
+                expect_operator_argument_amount(arguments.len(), 1)?;
+                #[cfg(feature = "empty_is_null")]
+                {
+                    if arguments[0].is_empty() {
+                        return Ok(Value::Empty);
+                    }
+                }
+                #[cfg(feature = "decimal_support")]
+                {
+                    if let Some(result) = arguments[0].as_number()?.checked_div(100.into()) {
+                        Ok(Value::Float(result))
+                    } else {
+                        Err(EvalexprError::division_error(
+                            arguments[0].clone(),
+                            Value::Float(100.into()),
+                        ))
+                    }
+                }
+                #[cfg(not(feature = "decimal_support"))]
+                {
+                    Ok(Value::Float(arguments[0].as_number()? / 100.0))
+                }
+            },
             Mul => {
                 expect_operator_argument_amount(arguments.len(), 2)?;
                 #[cfg(feature = "empty_is_null")]
@@ -435,6 +499,7 @@ impl Operator {
                     }
                 }
             },
+            #[cfg(not(feature = "percent_operator_is_percentage"))]
             Mod => {
                 expect_operator_argument_amount(arguments.len(), 2)?;
                 #[cfg(feature = "empty_is_null")]
@@ -680,8 +745,11 @@ impl Operator {
 
                 Ok(Value::Boolean(!a))
             },
-            Assign | AddAssign | SubAssign | MulAssign | DivAssign | ModAssign | ExpAssign
-            | AndAssign | OrAssign => Err(EvalexprError::ContextNotMutable),
+            Assign | AddAssign | SubAssign | MulAssign | DivAssign | ExpAssign | AndAssign
+            | OrAssign => Err(EvalexprError::ContextNotMutable),
+            #[cfg(not(feature = "percent_operator_is_percentage"))]
+            ModAssign => Err(EvalexprError::ContextNotMutable),
+
             Tuple => Ok(Value::Tuple(arguments.into())),
             Chain => {
                 if arguments.is_empty() {
@@ -748,8 +816,7 @@ impl Operator {
 
                 Ok(Value::Empty)
             },
-            AddAssign | SubAssign | MulAssign | DivAssign | ModAssign | ExpAssign | AndAssign
-            | OrAssign => {
+            AddAssign | SubAssign | MulAssign | DivAssign | ExpAssign | AndAssign | OrAssign => {
                 expect_operator_argument_amount(arguments.len(), 2)?;
 
                 let target = arguments[0].as_string()?;
@@ -764,7 +831,6 @@ impl Operator {
                     SubAssign => Operator::Sub.eval(&arguments, context),
                     MulAssign => Operator::Mul.eval(&arguments, context),
                     DivAssign => Operator::Div.eval(&arguments, context),
-                    ModAssign => Operator::Mod.eval(&arguments, context),
                     ExpAssign => Operator::Exp.eval(&arguments, context),
                     AndAssign => Operator::And.eval(&arguments, context),
                     OrAssign => Operator::Or.eval(&arguments, context),
@@ -773,6 +839,22 @@ impl Operator {
                         self
                     ),
                 }?;
+                context.set_value(target, result)?;
+
+                Ok(Value::Empty)
+            },
+            #[cfg(not(feature = "percent_operator_is_percentage"))]
+            ModAssign => {
+                expect_operator_argument_amount(arguments.len(), 2)?;
+
+                let target = arguments[0].as_string()?;
+                let left_value = Operator::VariableIdentifierRead {
+                    identifier: target.clone(),
+                }
+                .eval(&Vec::new(), context)?;
+                let arguments = vec![left_value, arguments[1].clone()];
+
+                let result = Operator::Mod.eval(&arguments, context)?;
                 context.set_value(target, result)?;
 
                 Ok(Value::Empty)

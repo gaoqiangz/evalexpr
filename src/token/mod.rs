@@ -36,6 +36,7 @@ pub enum Token {
     MinusAssign,
     StarAssign,
     SlashAssign,
+    #[cfg(not(feature = "percent_operator_is_percentage"))]
     PercentAssign,
     HatAssign,
     AndAssign,
@@ -153,6 +154,7 @@ impl Token {
             Token::MinusAssign => false,
             Token::StarAssign => false,
             Token::SlashAssign => false,
+            #[cfg(not(feature = "percent_operator_is_percentage"))]
             Token::PercentAssign => false,
             Token::HatAssign => false,
             Token::AndAssign => false,
@@ -197,6 +199,7 @@ impl Token {
             Token::MinusAssign => false,
             Token::StarAssign => false,
             Token::SlashAssign => false,
+            #[cfg(not(feature = "percent_operator_is_percentage"))]
             Token::PercentAssign => false,
             Token::HatAssign => false,
             Token::AndAssign => false,
@@ -213,6 +216,10 @@ impl Token {
     #[cfg(not(tarpaulin_include))]
     pub(crate) fn is_assignment(&self) -> bool {
         use Token::*;
+        #[cfg(not(feature = "percent_operator_is_percentage"))]
+        if matches!(self, PercentAssign) {
+            return true;
+        }
         matches!(
             self,
             Assign
@@ -220,7 +227,6 @@ impl Token {
                 | MinusAssign
                 | StarAssign
                 | SlashAssign
-                | PercentAssign
                 | HatAssign
                 | AndAssign
                 | OrAssign
@@ -333,6 +339,7 @@ fn partial_tokens_to_tokens(mut tokens: &[PartialToken]) -> EvalexprResult<Vec<T
                     },
                 },
                 PartialToken::Percent => match second {
+                    #[cfg(not(feature = "percent_operator_is_percentage"))]
                     Some(PartialToken::Eq) => Some(Token::PercentAssign),
                     _ => {
                         cutoff = 1;
@@ -492,6 +499,9 @@ mod tests {
 
     #[test]
     fn test_token_display() {
+        #[cfg(feature = "percent_operator_is_percentage")]
+        let token_string = "+ - * / % ^ == != > < >= <= && || ! ( ) = += -= *= /= ^= &&= ||= , ; ";
+        #[cfg(not(feature = "percent_operator_is_percentage"))]
         let token_string =
             "+ - * / % ^ == != > < >= <= && || ! ( ) = += -= *= /= %= ^= &&= ||= , ; ";
         let tokens = tokenize(token_string).unwrap();

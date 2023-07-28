@@ -192,6 +192,23 @@ fn test_braced_examples() {
 }
 
 #[test]
+#[cfg(feature = "percent_operator_is_percentage")]
+fn test_percentage_examples() {
+    assert_eq!(eval("2*10%"), Ok(Value::Float(0.2.into_float())));
+    assert_eq!(eval("1 + 2 * 10 %"), Ok(Value::Float(1.2.into_float())));
+    assert_eq!(eval("(10+10) %"), Ok(Value::Float(0.2.into_float())));
+    assert_eq!(eval("(10+10) %%"), Ok(Value::Float(0.002.into_float())));
+
+    let mut context = HashMapContext::new();
+    context.set_value("five".into(), Value::Int(5)).unwrap();
+    assert_eq!(
+        eval_with_context("2*five % *(2+1)", &context),
+        Ok(Value::Float(0.3.into_float()))
+    );
+}
+
+#[test]
+#[cfg(not(feature = "percent_operator_is_percentage"))]
 fn test_mod_examples() {
     assert_eq!(eval("1 % 4"), Ok(Value::Int(1)));
     assert_eq!(eval("6 % 4"), Ok(Value::Int(2)));
@@ -719,6 +736,7 @@ fn test_no_panic() {
     ))
     .is_err());
     assert!(eval(&format!("{} / {}", IntType::max_value(), 0)).is_err());
+    #[cfg(not(feature = "percent_operator_is_percentage"))]
     assert!(eval(&format!("{} % {}", IntType::max_value(), 0)).is_err());
     assert!(eval(&format!(
         "{} ^ {}",
@@ -1613,6 +1631,7 @@ fn test_operator_assignments() {
     assert_eq!(eval_empty_with_context_mut("a *= 5", &mut context), Ok(()));
     assert_eq!(eval_empty_with_context_mut("b = 5.0", &mut context), Ok(()));
     assert_eq!(eval_empty_with_context_mut("b /= 5", &mut context), Ok(()));
+    #[cfg(not(feature = "percent_operator_is_percentage"))]
     assert_eq!(eval_empty_with_context_mut("b %= 5", &mut context), Ok(()));
     assert_eq!(eval_empty_with_context_mut("b ^= 5", &mut context), Ok(()));
     assert_eq!(
@@ -1642,7 +1661,19 @@ fn test_operator_assignments() {
         Ok(2.5.into_float())
     );
     assert_eq!(
-        eval_float_with_context_mut("b %= 2; b", &mut context),
+        eval_float_with_context_mut(
+            {
+                #[cfg(feature = "percent_operator_is_percentage")]
+                {
+                    "b = math::mod(b,2); b"
+                }
+                #[cfg(not(feature = "percent_operator_is_percentage"))]
+                {
+                    "b %= 2; b"
+                }
+            },
+            &mut context
+        ),
         Ok(0.5.into_float())
     );
     assert_eq!(
@@ -1757,6 +1788,7 @@ fn test_hashmap_context_type_safety() {
             actual: Value::Float(1.0.into_float())
         })
     );
+    #[cfg(not(feature = "percent_operator_is_percentage"))]
     assert_eq!(
         eval_with_context_mut("a %= 4.0", &mut context),
         Err(EvalexprError::ExpectedInt {
@@ -1796,6 +1828,7 @@ fn test_hashmap_context_type_safety() {
         eval_with_context_mut("b /= 4", &mut context),
         Ok(Value::Empty)
     );
+    #[cfg(not(feature = "percent_operator_is_percentage"))]
     assert_eq!(
         eval_with_context_mut("b %= 4", &mut context),
         Ok(Value::Empty)
@@ -2451,7 +2484,6 @@ fn test_variable_assignment_and_iteration() {
 
 #[test]
 fn test_negative_power() {
-    println!("{:?}", build_operator_tree("3^-2").unwrap());
     assert_eq!(
         eval("3^-2"),
         Ok(Value::Float(1.0.into_float() / 9.0.into_float()))

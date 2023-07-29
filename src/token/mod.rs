@@ -26,6 +26,11 @@ pub enum Token {
     Or,
     Not,
 
+    #[cfg(feature = "in_operator")]
+    In,
+    #[cfg(feature = "in_operator")]
+    NotIn,
+
     // Precedence
     LBrace,
     RBrace,
@@ -87,6 +92,9 @@ pub enum PartialToken {
     Ampersand,
     /// A vertical bar character '|'.
     VerticalBar,
+    #[cfg(feature = "in_operator")]
+    /// A colon character ':'
+    Colon,
 }
 
 // Make this a const fn as soon as is_whitespace and to_string get stable (issue #57563)
@@ -104,6 +112,8 @@ fn char_to_partial_token(c: char) -> PartialToken {
 
         ',' => PartialToken::Token(Token::Comma),
         ';' => PartialToken::Token(Token::Semicolon),
+        #[cfg(feature = "in_operator")]
+        ':' => PartialToken::Colon,
 
         '=' => PartialToken::Eq,
         '!' => PartialToken::ExclamationMark,
@@ -142,6 +152,11 @@ impl Token {
             Token::And => false,
             Token::Or => false,
             Token::Not => false,
+
+            #[cfg(feature = "in_operator")]
+            Token::In => false,
+            #[cfg(feature = "in_operator")]
+            Token::NotIn => false,
 
             Token::LBrace => true,
             Token::RBrace => false,
@@ -187,6 +202,11 @@ impl Token {
             Token::And => false,
             Token::Or => false,
             Token::Not => false,
+
+            #[cfg(feature = "in_operator")]
+            Token::In => false,
+            #[cfg(feature = "in_operator")]
+            Token::NotIn => false,
 
             Token::LBrace => false,
             Token::RBrace => true,
@@ -284,7 +304,21 @@ fn str_to_partial_tokens(string: &str) -> EvalexprResult<Vec<PartialToken>> {
                     last.push_str(literal);
                     true
                 } else {
-                    false
+                    #[cfg(feature = "in_operator")]
+                    {
+                        if let (Some(PartialToken::Literal(last)), PartialToken::Colon) =
+                            (result.last_mut(), &partial_token)
+                        {
+                            last.push_str(&PartialToken::Colon.to_string());
+                            true
+                        } else {
+                            false
+                        }
+                    }
+                    #[cfg(not(feature = "in_operator"))]
+                    {
+                        false
+                    }
                 };
 
             if !if_let_successful {
@@ -411,6 +445,8 @@ fn partial_tokens_to_tokens(mut tokens: &[PartialToken]) -> EvalexprResult<Vec<T
                 },
                 PartialToken::Eq => match second {
                     Some(PartialToken::Eq) => Some(Token::Eq),
+                    #[cfg(feature = "in_operator")]
+                    Some(PartialToken::Colon) => Some(Token::In),
                     _ => {
                         cutoff = 1;
                         Some(Token::Assign)
@@ -418,6 +454,8 @@ fn partial_tokens_to_tokens(mut tokens: &[PartialToken]) -> EvalexprResult<Vec<T
                 },
                 PartialToken::ExclamationMark => match second {
                     Some(PartialToken::Eq) => Some(Token::Neq),
+                    #[cfg(feature = "in_operator")]
+                    Some(PartialToken::Colon) => Some(Token::NotIn),
                     _ => {
                         cutoff = 1;
                         Some(Token::Not)
@@ -456,6 +494,10 @@ fn partial_tokens_to_tokens(mut tokens: &[PartialToken]) -> EvalexprResult<Vec<T
                         _ => Some(Token::Or),
                     },
                     _ => return Err(EvalexprError::unmatched_partial_token(first, second)),
+                },
+                #[cfg(feature = "in_operator")]
+                PartialToken::Colon => {
+                    return Err(EvalexprError::unmatched_partial_token(first, None))
                 },
             }
             .into_iter(),

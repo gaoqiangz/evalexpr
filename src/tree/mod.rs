@@ -806,6 +806,11 @@ pub(crate) fn tokens_to_operator_tree(tokens: Vec<Token>) -> EvalexprResult<Node
             Token::Or => Some(Node::new(Operator::Or)),
             Token::Not => Some(Node::new(Operator::Not)),
 
+            #[cfg(feature = "in_operator")]
+            Token::In => Some(Node::new(Operator::In)),
+            #[cfg(feature = "in_operator")]
+            Token::NotIn => Some(Node::new(Operator::NotIn)),
+
             Token::LBrace => {
                 root_stack.push(Node::root_node());
                 None

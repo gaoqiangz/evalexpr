@@ -30,6 +30,11 @@ impl Display for Operator {
             Or => write!(f, "||"),
             Not => write!(f, "!"),
 
+            #[cfg(feature = "in_operator")]
+            In => write!(f, "=:"),
+            #[cfg(feature = "in_operator")]
+            NotIn => write!(f, "!:"),
+
             Assign => write!(f, " = "),
             AddAssign => write!(f, " += "),
             SubAssign => write!(f, " -= "),

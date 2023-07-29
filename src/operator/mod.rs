@@ -49,6 +49,13 @@ pub enum Operator {
     /// A binary logical not operator.
     Not,
 
+    /// A binary in comparator.
+    #[cfg(feature = "in_operator")]
+    In,
+    /// A binary not in comparator.
+    #[cfg(feature = "in_operator")]
+    NotIn,
+
     /// A binary assignment operator.
     Assign,
     /// A binary add-assign operator.
@@ -137,6 +144,9 @@ impl Operator {
             Or => 70,
             Not => 110,
 
+            #[cfg(feature = "in_operator")]
+            In | NotIn => 80,
+
             Assign | AddAssign | SubAssign | MulAssign | DivAssign | ExpAssign | AndAssign
             | OrAssign => 50,
 
@@ -186,6 +196,9 @@ impl Operator {
 
             #[cfg(not(feature = "percent_operator_is_percentage"))]
             Mod | ModAssign => Some(2),
+
+            #[cfg(feature = "in_operator")]
+            In | NotIn => Some(2),
 
             Tuple | Chain => None,
             Not | Neg | RootNode => Some(1),
@@ -593,10 +606,13 @@ impl Operator {
                         return Ok(Value::Empty);
                     }
                 }
-                if let (Ok(a), Ok(b)) = (arguments[0].as_number(), arguments[1].as_number()) {
+                if arguments[0] == arguments[1] {
+                    Ok(Value::Boolean(true))
+                } else if let (Ok(a), Ok(b)) = (arguments[0].as_number(), arguments[1].as_number())
+                {
                     Ok(Value::Boolean(a == b))
                 } else {
-                    Ok(Value::Boolean(arguments[0] == arguments[1]))
+                    Ok(Value::Boolean(false))
                 }
             },
             Neq => {
@@ -607,10 +623,13 @@ impl Operator {
                         return Ok(Value::Empty);
                     }
                 }
-                if let (Ok(a), Ok(b)) = (arguments[0].as_number(), arguments[1].as_number()) {
+                if arguments[0] == arguments[1] {
+                    Ok(Value::Boolean(false))
+                } else if let (Ok(a), Ok(b)) = (arguments[0].as_number(), arguments[1].as_number())
+                {
                     Ok(Value::Boolean(a != b))
                 } else {
-                    Ok(Value::Boolean(arguments[0] != arguments[1]))
+                    Ok(Value::Boolean(true))
                 }
             },
             Gt => {
@@ -744,6 +763,48 @@ impl Operator {
                 let a = arguments[0].as_boolean()?;
 
                 Ok(Value::Boolean(!a))
+            },
+            #[cfg(feature = "in_operator")]
+            In => {
+                expect_operator_argument_amount(arguments.len(), 2)?;
+                #[cfg(feature = "empty_is_null")]
+                {
+                    if arguments[0].is_empty() || arguments[1].is_empty() {
+                        return Ok(Value::Empty);
+                    }
+                }
+                let set = arguments[1].as_tuple()?;
+                for item in set {
+                    if arguments[0] == item {
+                        return Ok(Value::Boolean(true));
+                    } else if let (Ok(a), Ok(b)) = (arguments[0].as_number(), item.as_number()) {
+                        if a == b {
+                            return Ok(Value::Boolean(true));
+                        }
+                    }
+                }
+                Ok(Value::Boolean(false))
+            },
+            #[cfg(feature = "in_operator")]
+            NotIn => {
+                expect_operator_argument_amount(arguments.len(), 2)?;
+                #[cfg(feature = "empty_is_null")]
+                {
+                    if arguments[0].is_empty() || arguments[1].is_empty() {
+                        return Ok(Value::Empty);
+                    }
+                }
+                let set = arguments[1].as_tuple()?;
+                for item in set {
+                    if arguments[0] == item {
+                        return Ok(Value::Boolean(false));
+                    } else if let (Ok(a), Ok(b)) = (arguments[0].as_number(), item.as_number()) {
+                        if a == b {
+                            return Ok(Value::Boolean(false));
+                        }
+                    }
+                }
+                Ok(Value::Boolean(true))
             },
             Assign | AddAssign | SubAssign | MulAssign | DivAssign | ExpAssign | AndAssign
             | OrAssign => Err(EvalexprError::ContextNotMutable),

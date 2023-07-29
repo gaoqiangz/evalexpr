@@ -208,6 +208,22 @@ fn test_percentage_examples() {
 }
 
 #[test]
+#[cfg(feature = "in_operator")]
+fn test_in_examples() {
+    assert_eq!(eval("3 =: (1,2,3,4,5)"), Ok(Value::Boolean(true)));
+    assert_eq!(eval("3 !: (1,2,3,4,5)"), Ok(Value::Boolean(false)));
+    assert_eq!(eval("!(3 !: (1,2,3,4,5))"), Ok(Value::Boolean(true)));
+    assert_eq!(
+        eval(r#""abc" =:   (1,2,"abc",4,5)"#),
+        Ok(Value::Boolean(true))
+    );
+    assert_eq!(
+        eval(r#""abc" !:   ("aaa",2,"abc","xxx","ddd")"#),
+        Ok(Value::Boolean(false))
+    );
+}
+
+#[test]
 #[cfg(not(feature = "percent_operator_is_percentage"))]
 fn test_mod_examples() {
     assert_eq!(eval("1 % 4"), Ok(Value::Int(1)));

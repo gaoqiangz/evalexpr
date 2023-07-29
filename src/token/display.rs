@@ -24,6 +24,11 @@ impl fmt::Display for Token {
             Or => write!(f, "||"),
             Not => write!(f, "!"),
 
+            #[cfg(feature = "in_operator")]
+            In => write!(f, "=:"),
+            #[cfg(feature = "in_operator")]
+            NotIn => write!(f, "!:"),
+
             // Precedence
             LBrace => write!(f, "("),
             RBrace => write!(f, ")"),
@@ -73,6 +78,8 @@ impl fmt::Display for PartialToken {
             Lt => write!(f, "<"),
             Ampersand => write!(f, "&"),
             VerticalBar => write!(f, "|"),
+            #[cfg(feature = "in_operator")]
+            Colon => write!(f, ":"),
         }
     }
 }

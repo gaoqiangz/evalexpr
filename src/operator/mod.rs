@@ -49,12 +49,24 @@ pub enum Operator {
     /// A binary logical not operator.
     Not,
 
-    /// A binary in comparator.
+    /// A binary in comparator (`=:`).
     #[cfg(feature = "in_operator")]
     In,
-    /// A binary not in comparator.
+    /// A binary not in comparator (`!:`).
     #[cfg(feature = "in_operator")]
     NotIn,
+    /// A binary greater-than-in comparator (`>:`).
+    #[cfg(feature = "in_operator")]
+    GtIn,
+    /// A binary lower-than-in comparator (`<:`).
+    #[cfg(feature = "in_operator")]
+    LtIn,
+    /// A binary and-in comparator (`&:`).
+    #[cfg(feature = "in_operator")]
+    AndIn,
+    /// A binary or-in comparator (`|:`).
+    #[cfg(feature = "in_operator")]
+    OrIn,
 
     /// A binary assignment operator.
     Assign,
@@ -145,7 +157,7 @@ impl Operator {
             Not => 110,
 
             #[cfg(feature = "in_operator")]
-            In | NotIn => 80,
+            In | NotIn | GtIn | LtIn | AndIn | OrIn => 80,
 
             Assign | AddAssign | SubAssign | MulAssign | DivAssign | ExpAssign | AndAssign
             | OrAssign => 50,
@@ -198,7 +210,7 @@ impl Operator {
             Mod | ModAssign => Some(2),
 
             #[cfg(feature = "in_operator")]
-            In | NotIn => Some(2),
+            In | NotIn | GtIn | LtIn | AndIn | OrIn => Some(2),
 
             Tuple | Chain => None,
             Not | Neg | RootNode => Some(1),
@@ -805,6 +817,108 @@ impl Operator {
                     }
                 }
                 Ok(Value::Boolean(true))
+            },
+            #[cfg(feature = "in_operator")]
+            GtIn => {
+                expect_operator_argument_amount(arguments.len(), 2)?;
+                #[cfg(feature = "empty_is_null")]
+                {
+                    if arguments[0].is_empty() || arguments[1].is_empty() {
+                        return Ok(Value::Empty);
+                    }
+                }
+                let set = arguments[1].as_tuple()?;
+                for item in set {
+                    if let (Ok(a), Ok(b)) = (arguments[0].as_string(), item.as_string()) {
+                        if a > b {
+                            return Ok(Value::Boolean(true));
+                        }
+                    } else if let (Ok(a), Ok(b)) = (arguments[0].as_int(), item.as_int()) {
+                        if a > b {
+                            return Ok(Value::Boolean(true));
+                        }
+                    } else if arguments[0].as_number()? > item.as_number()? {
+                        return Ok(Value::Boolean(true));
+                    }
+                }
+                Ok(Value::Boolean(false))
+            },
+            #[cfg(feature = "in_operator")]
+            LtIn => {
+                expect_operator_argument_amount(arguments.len(), 2)?;
+                #[cfg(feature = "empty_is_null")]
+                {
+                    if arguments[0].is_empty() || arguments[1].is_empty() {
+                        return Ok(Value::Empty);
+                    }
+                }
+                let set = arguments[1].as_tuple()?;
+                for item in set {
+                    if let (Ok(a), Ok(b)) = (arguments[0].as_string(), item.as_string()) {
+                        if a < b {
+                            return Ok(Value::Boolean(true));
+                        }
+                    } else if let (Ok(a), Ok(b)) = (arguments[0].as_int(), item.as_int()) {
+                        if a < b {
+                            return Ok(Value::Boolean(true));
+                        }
+                    } else if arguments[0].as_number()? < item.as_number()? {
+                        return Ok(Value::Boolean(true));
+                    }
+                }
+                Ok(Value::Boolean(false))
+            },
+            #[cfg(feature = "in_operator")]
+            AndIn => {
+                expect_operator_argument_amount(arguments.len(), 2)?;
+                #[cfg(feature = "empty_is_null")]
+                {
+                    if arguments[0].is_empty() || arguments[1].is_empty() {
+                        return Ok(Value::Empty);
+                    }
+                }
+                let set1 = arguments[0].as_tuple()?;
+                let set2 = arguments[1].as_tuple()?;
+                let mut has_matched = false;
+                'outter: for item1 in set1 {
+                    for item2 in set2.iter() {
+                        if item1 == *item2 {
+                            has_matched = true;
+                            continue 'outter;
+                        } else if let (Ok(a), Ok(b)) = (item1.as_number(), item2.as_number()) {
+                            if a == b {
+                                has_matched = true;
+                                continue 'outter;
+                            }
+                        }
+                    }
+                    return Ok(Value::Boolean(false));
+                }
+                Ok(Value::Boolean(has_matched))
+            },
+            #[cfg(feature = "in_operator")]
+            OrIn => {
+                expect_operator_argument_amount(arguments.len(), 2)?;
+                #[cfg(feature = "empty_is_null")]
+                {
+                    if arguments[0].is_empty() || arguments[1].is_empty() {
+                        return Ok(Value::Empty);
+                    }
+                }
+                let set1 = arguments[0].as_tuple()?;
+                let set2 = arguments[1].as_tuple()?;
+                for item1 in set1 {
+                    for item2 in set2.iter() {
+                        if item1 == *item2 {
+                            return Ok(Value::Boolean(true));
+                        } else if let (Ok(a), Ok(b)) = (item1.as_number(), item2.as_number()) {
+                            if a == b {
+                                return Ok(Value::Boolean(true));
+                            }
+                        }
+                    }
+                }
+                Ok(Value::Boolean(false))
             },
             Assign | AddAssign | SubAssign | MulAssign | DivAssign | ExpAssign | AndAssign
             | OrAssign => Err(EvalexprError::ContextNotMutable),

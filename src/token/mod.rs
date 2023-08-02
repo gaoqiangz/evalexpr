@@ -30,6 +30,14 @@ pub enum Token {
     In,
     #[cfg(feature = "in_operator")]
     NotIn,
+    #[cfg(feature = "in_operator")]
+    GtIn,
+    #[cfg(feature = "in_operator")]
+    LtIn,
+    #[cfg(feature = "in_operator")]
+    AndIn,
+    #[cfg(feature = "in_operator")]
+    OrIn,
 
     // Precedence
     LBrace,
@@ -154,9 +162,9 @@ impl Token {
             Token::Not => false,
 
             #[cfg(feature = "in_operator")]
-            Token::In => false,
-            #[cfg(feature = "in_operator")]
-            Token::NotIn => false,
+            Token::In | Token::NotIn | Token::GtIn | Token::LtIn | Token::AndIn | Token::OrIn => {
+                false
+            },
 
             Token::LBrace => true,
             Token::RBrace => false,
@@ -204,9 +212,9 @@ impl Token {
             Token::Not => false,
 
             #[cfg(feature = "in_operator")]
-            Token::In => false,
-            #[cfg(feature = "in_operator")]
-            Token::NotIn => false,
+            Token::In | Token::NotIn | Token::GtIn | Token::LtIn | Token::AndIn | Token::OrIn => {
+                false
+            },
 
             Token::LBrace => false,
             Token::RBrace => true,
@@ -463,6 +471,8 @@ fn partial_tokens_to_tokens(mut tokens: &[PartialToken]) -> EvalexprResult<Vec<T
                 },
                 PartialToken::Gt => match second {
                     Some(PartialToken::Eq) => Some(Token::Geq),
+                    #[cfg(feature = "in_operator")]
+                    Some(PartialToken::Colon) => Some(Token::GtIn),
                     _ => {
                         cutoff = 1;
                         Some(Token::Gt)
@@ -470,6 +480,8 @@ fn partial_tokens_to_tokens(mut tokens: &[PartialToken]) -> EvalexprResult<Vec<T
                 },
                 PartialToken::Lt => match second {
                     Some(PartialToken::Eq) => Some(Token::Leq),
+                    #[cfg(feature = "in_operator")]
+                    Some(PartialToken::Colon) => Some(Token::LtIn),
                     _ => {
                         cutoff = 1;
                         Some(Token::Lt)
@@ -483,6 +495,8 @@ fn partial_tokens_to_tokens(mut tokens: &[PartialToken]) -> EvalexprResult<Vec<T
                         },
                         _ => Some(Token::And),
                     },
+                    #[cfg(feature = "in_operator")]
+                    Some(PartialToken::Colon) => Some(Token::AndIn),
                     _ => return Err(EvalexprError::unmatched_partial_token(first, second)),
                 },
                 PartialToken::VerticalBar => match second {
@@ -493,6 +507,8 @@ fn partial_tokens_to_tokens(mut tokens: &[PartialToken]) -> EvalexprResult<Vec<T
                         },
                         _ => Some(Token::Or),
                     },
+                    #[cfg(feature = "in_operator")]
+                    Some(PartialToken::Colon) => Some(Token::OrIn),
                     _ => return Err(EvalexprError::unmatched_partial_token(first, second)),
                 },
                 #[cfg(feature = "in_operator")]

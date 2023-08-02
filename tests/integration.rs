@@ -221,6 +221,16 @@ fn test_in_examples() {
         eval(r#""abc" !:   ("aaa",2,"abc","xxx","ddd")"#),
         Ok(Value::Boolean(false))
     );
+    assert_eq!(eval("(,3) =: (1,2,3,4,5)"), Ok(Value::Boolean(false)));
+    assert_eq!(eval("(0,3) &: (1,2,3,4,5)"), Ok(Value::Boolean(false)));
+    assert_eq!(eval("(0,3) |: (1,2,3,4,5)"), Ok(Value::Boolean(true)));
+    assert_eq!(eval("(2,3) &: (1,2,3,4,5)"), Ok(Value::Boolean(true)));
+    assert_eq!(eval("(2,3) |: (1,2,3,4,5)"), Ok(Value::Boolean(true)));
+    assert_eq!(eval("(7,8) &: (1,2,3,4,5)"), Ok(Value::Boolean(false)));
+    assert_eq!(eval("3 >: (1,2,3,4,5)"), Ok(Value::Boolean(true)));
+    assert_eq!(eval("0 >: (1,2,3,4,5)"), Ok(Value::Boolean(false)));
+    assert_eq!(eval("3 <: (1,2,3,4,5)"), Ok(Value::Boolean(true)));
+    assert_eq!(eval("6 <: (1,2,3,4,5)"), Ok(Value::Boolean(false)));
 }
 
 #[test]

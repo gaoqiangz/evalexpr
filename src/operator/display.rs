@@ -34,6 +34,14 @@ impl Display for Operator {
             In => write!(f, "=:"),
             #[cfg(feature = "in_operator")]
             NotIn => write!(f, "!:"),
+            #[cfg(feature = "in_operator")]
+            GtIn => write!(f, ">:"),
+            #[cfg(feature = "in_operator")]
+            LtIn => write!(f, "<:"),
+            #[cfg(feature = "in_operator")]
+            AndIn => write!(f, "&:"),
+            #[cfg(feature = "in_operator")]
+            OrIn => write!(f, "|:"),
 
             Assign => write!(f, " = "),
             AddAssign => write!(f, " += "),

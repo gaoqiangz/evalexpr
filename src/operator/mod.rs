@@ -785,7 +785,9 @@ impl Operator {
                         return Ok(Value::Empty);
                     }
                 }
-                let set = arguments[1].as_tuple()?;
+                let set = arguments[1]
+                    .as_tuple()
+                    .unwrap_or_else(|_| vec![arguments[1].clone()]);
                 for item in set {
                     if arguments[0] == item {
                         return Ok(Value::Boolean(true));
@@ -806,7 +808,9 @@ impl Operator {
                         return Ok(Value::Empty);
                     }
                 }
-                let set = arguments[1].as_tuple()?;
+                let set = arguments[1]
+                    .as_tuple()
+                    .unwrap_or_else(|_| vec![arguments[1].clone()]);
                 for item in set {
                     if arguments[0] == item {
                         return Ok(Value::Boolean(false));
@@ -827,7 +831,9 @@ impl Operator {
                         return Ok(Value::Empty);
                     }
                 }
-                let set = arguments[1].as_tuple()?;
+                let set = arguments[1]
+                    .as_tuple()
+                    .unwrap_or_else(|_| vec![arguments[1].clone()]);
                 for item in set {
                     if let (Ok(a), Ok(b)) = (arguments[0].as_string(), item.as_string()) {
                         if a > b {
@@ -852,7 +858,9 @@ impl Operator {
                         return Ok(Value::Empty);
                     }
                 }
-                let set = arguments[1].as_tuple()?;
+                let set = arguments[1]
+                    .as_tuple()
+                    .unwrap_or_else(|_| vec![arguments[1].clone()]);
                 for item in set {
                     if let (Ok(a), Ok(b)) = (arguments[0].as_string(), item.as_string()) {
                         if a < b {
@@ -877,8 +885,12 @@ impl Operator {
                         return Ok(Value::Empty);
                     }
                 }
-                let set1 = arguments[0].as_tuple()?;
-                let set2 = arguments[1].as_tuple()?;
+                let set1 = arguments[0]
+                    .as_tuple()
+                    .unwrap_or_else(|_| vec![arguments[0].clone()]);
+                let set2 = arguments[1]
+                    .as_tuple()
+                    .unwrap_or_else(|_| vec![arguments[1].clone()]);
                 let mut has_matched = false;
                 'outter: for item1 in set1 {
                     for item2 in set2.iter() {
@@ -905,8 +917,12 @@ impl Operator {
                         return Ok(Value::Empty);
                     }
                 }
-                let set1 = arguments[0].as_tuple()?;
-                let set2 = arguments[1].as_tuple()?;
+                let set1 = arguments[0]
+                    .as_tuple()
+                    .unwrap_or_else(|_| vec![arguments[0].clone()]);
+                let set2 = arguments[1]
+                    .as_tuple()
+                    .unwrap_or_else(|_| vec![arguments[1].clone()]);
                 for item1 in set1 {
                     for item2 in set2.iter() {
                         if item1 == *item2 {

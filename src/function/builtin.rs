@@ -215,7 +215,7 @@ pub fn builtin_function(identifier: &str) -> Option<Function> {
             for argument in arguments {
                 if let Value::Float(float) = argument {
                     if let Some(min) = min_float {
-                        min_float = Some(min.max(float));
+                        min_float = Some(min.min(float));
                     } else {
                         min_float = Some(float);
                     }
